@@ -55,9 +55,16 @@
             padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
+            margin: 0 5px;
         }
         button:hover {
             background-color: #45a049;
+        }
+        button.delete {
+            background-color: #dc3545;
+        }
+        button.delete:hover {
+            background-color: #c82333;
         }
         input[type="number"] {
             padding: 8px;
@@ -67,64 +74,134 @@
         }
         .history {
             margin-top: 20px;
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
         }
         .history-item {
             padding: 10px;
             border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #666;
+        }
+        .tab.active {
+            border-bottom: 2px solid #4CAF50;
+            color: #4CAF50;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        #analytics canvas {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+        .setup-container {
+            text-align: center;
+            padding: 40px;
+        }
+        .export-import {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Quran Reading Tracker</h1>
-        
-        <div class="input-group">
-            <label for="totalPages">Total Pages Goal:</label>
-            <input type="number" id="totalPages" min="1" value="604">
-            <button onclick="setTotalPages()">Set Goal</button>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('main')">Main</button>
+            <button class="tab" onclick="showTab('analytics')">Analytics</button>
+            <button class="tab" onclick="showTab('settings')">Settings</button>
         </div>
 
-        <div class="input-group">
-            <label for="pagesRead">Pages Read Today:</label>
-            <input type="number" id="pagesRead" min="1">
-            <button onclick="addPages()">Add Pages</button>
+        <div id="main" class="tab-content active">
+            <div class="input-group">
+                <label for="pagesRead">Pages Read:</label>
+                <input type="number" id="pagesRead" min="1">
+                <button onclick="addPages()">Add Pages</button>
+            </div>
+
+            <div class="progress-container">
+                <h3>Overall Progress</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p id="progressText">0%</p>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>Total Pages Read</h3>
+                    <p id="totalPagesRead">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Pages Remaining</h3>
+                    <p id="pagesRemaining">604</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Daily Average</h3>
+                    <p id="dailyAverage">0</p>
+                </div>
+            </div>
+
+            <div class="history">
+                <h3>Reading History</h3>
+                <div id="historyList"></div>
+            </div>
         </div>
 
-        <div class="progress-container">
-            <h3>Overall Progress</h3>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-            <p id="progressText">0%</p>
+        <div id="analytics" class="tab-content">
+            <h2>Reading Analytics</h2>
+            <canvas id="weeklyChart"></canvas>
+            <canvas id="monthlyChart"></canvas>
         </div>
 
-        <div class="stats">
-            <div class="stat-card">
-                <h3>Total Pages Read</h3>
-                <p id="totalPagesRead">0</p>
+        <div id="settings" class="tab-content">
+            <h2>Settings</h2>
+            <div class="input-group">
+                <label for="totalPages">Total Pages Goal:</label>
+                <input type="number" id="totalPages" min="1" value="604">
+                <button onclick="setTotalPages()">Update Goal</button>
             </div>
-            <div class="stat-card">
-                <h3>Pages Remaining</h3>
-                <p id="pagesRemaining">604</p>
+            
+            <div class="input-group">
+                <label for="startPage">Starting Page:</label>
+                <input type="number" id="startPage" min="1" max="604">
+                <button onclick="setStartPage()">Set Starting Page</button>
             </div>
-            <div class="stat-card">
-                <h3>Daily Average</h3>
-                <p id="dailyAverage">0</p>
-            </div>
-        </div>
 
-        <div class="history">
-            <h3>Reading History</h3>
-            <div id="historyList"></div>
+            <div class="export-import">
+                <h3>Backup Your Data</h3>
+                <button onclick="exportData()">Export Data</button>
+                <button onclick="importData()">Import Data</button>
+            </div>
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
     <script>
         // Initialize data from localStorage or set defaults
         let data = JSON.parse(localStorage.getItem('quranTracker')) || {
             totalPages: 604,
+            startPage: 1,
             pagesRead: 0,
             history: [],
             startDate: new Date().toISOString()
@@ -132,6 +209,35 @@
 
         // Update UI on load
         updateUI();
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
+
+            if (tabName === 'analytics') {
+                updateAnalytics();
+            }
+        }
+
+        function setStartPage() {
+            const input = document.getElementById('startPage');
+            const page = parseInt(input.value);
+            if (page > 0 && page <= data.totalPages) {
+                data.startPage = page;
+                data.pagesRead = page - 1; // Adjust pages read based on starting page
+                saveData();
+                updateUI();
+            }
+        }
 
         function setTotalPages() {
             const input = document.getElementById('totalPages');
@@ -150,7 +256,8 @@
                 data.pagesRead += pages;
                 data.history.push({
                     date: new Date().toISOString(),
-                    pages: pages
+                    pages: pages,
+                    id: Date.now() // Unique ID for each entry
                 });
                 input.value = '';
                 saveData();
@@ -158,9 +265,19 @@
             }
         }
 
+        function deleteEntry(id) {
+            const entry = data.history.find(h => h.id === id);
+            if (entry) {
+                data.pagesRead -= entry.pages;
+                data.history = data.history.filter(h => h.id !== id);
+                saveData();
+                updateUI();
+            }
+        }
+
         function updateUI() {
             // Update progress bar
-            const progress = (data.pagesRead / data.totalPages) * 100;
+            const progress = ((data.pagesRead) / data.totalPages * 100);
             document.getElementById('progressFill').style.width = `${progress}%`;
             document.getElementById('progressText').textContent = `${progress.toFixed(1)}%`;
 
@@ -179,12 +296,100 @@
             const historyList = document.getElementById('historyList');
             historyList.innerHTML = '';
             data.history.slice().reverse().forEach(entry => {
-                const date = new Date(entry.date).toLocaleDateString();
                 const div = document.createElement('div');
                 div.className = 'history-item';
-                div.textContent = `${date}: Read ${entry.pages} pages`;
+                const date = new Date(entry.date).toLocaleDateString();
+                div.innerHTML = `
+                    <span>${date}: Read ${entry.pages} pages</span>
+                    <button class="delete" onclick="deleteEntry(${entry.id})">Delete</button>
+                `;
                 historyList.appendChild(div);
             });
+        }
+
+        function updateAnalytics() {
+            // Group data by week and month
+            const weeklyData = {};
+            const monthlyData = {};
+
+            data.history.forEach(entry => {
+                const date = new Date(entry.date);
+                const weekKey = `${date.getFullYear()}-W${getWeekNumber(date)}`;
+                const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+
+                weeklyData[weekKey] = (weeklyData[weekKey] || 0) + entry.pages;
+                monthlyData[monthKey] = (monthlyData[monthKey] || 0) + entry.pages;
+            });
+
+            // Create charts
+            createChart('weeklyChart', 'Pages Read per Week', weeklyData);
+            createChart('monthlyChart', 'Pages Read per Month', monthlyData);
+        }
+
+        function getWeekNumber(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        function createChart(canvasId, label, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: label,
+                        data: Object.values(data),
+                        backgroundColor: '#4CAF50'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(data);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'quran-tracker-backup.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        data = importedData;
+                        saveData();
+                        updateUI();
+                        alert('Data imported successfully!');
+                    } catch (error) {
+                        alert('Error importing data. Please make sure the file is valid.');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
         }
 
         function saveData() {
@@ -193,4 +398,3 @@
     </script>
 </body>
 </html>
-Initial commit: Add Quran tracker app
