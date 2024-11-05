@@ -1,223 +1,413 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- Previous head section remains the same -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quran Reading Tracker</title>
     <style>
-        /* Previous styles remain the same */
-        /* Adding new styles */
-        .next-page-card {
-            background-color: #e8f5e9;
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
             padding: 20px;
             border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .progress-container {
             margin: 20px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .next-page-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
             border-left: 4px solid #4CAF50;
         }
         .milestone {
             color: #2e7d32;
             font-weight: bold;
         }
-        .daily-goal-card {
-            background-color: #f5f5f5;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 10px 0;
+        .input-group {
+            margin: 20px 0;
         }
-        .streak-card {
-            background-color: #fff3e0;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 10px 0;
-            border-left: 4px solid #ff9800;
-        }
-        .milestone-marker {
-            display: inline-block;
-            padding: 3px 8px;
+        button {
             background-color: #4CAF50;
             color: white;
-            border-radius: 12px;
-            font-size: 0.8em;
-            margin-left: 8px;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.delete {
+            background-color: #dc3545;
+        }
+        button.delete:hover {
+            background-color: #c82333;
+        }
+        input[type="number"] {
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .history {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #666;
+        }
+        .tab.active {
+            border-bottom: 2px solid #4CAF50;
+            color: #4CAF50;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        #analytics canvas {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+        .export-import {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
         }
     </style>
 </head>
 <body>
-    <!-- Previous HTML structure remains, adding new elements -->
     <div class="container">
-        <!-- ... existing header and tabs ... -->
+        <h1>Quran Reading Tracker</h1>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('main')">Main</button>
+            <button class="tab" onclick="showTab('analytics')">Analytics</button>
+            <button class="tab" onclick="showTab('settings')">Settings</button>
+        </div>
 
         <div id="main" class="tab-content active">
             <div class="next-page-card">
-                <h3>📖 Next Reading Session</h3>
-                <p>You should start reading from: <span class="milestone" id="nextPage">Page 1</span></p>
-                <p>Last reading session: <span id="lastReadingInfo">No sessions yet</span></p>
+                <h3>Next Reading Session</h3>
+                <p>Continue from: <span class="milestone" id="nextPage">Page 1</span></p>
+                <p id="lastReadingInfo" style="color: #666; font-size: 0.9em;">No sessions yet</p>
             </div>
 
-            <!-- Existing input group -->
             <div class="input-group">
                 <label for="pagesRead">Pages Read:</label>
                 <input type="number" id="pagesRead" min="1">
                 <button onclick="addPages()">Add Pages</button>
             </div>
 
-            <div class="streak-card">
-                <h3>🔥 Reading Streak</h3>
-                <p>Current streak: <span id="currentStreak">0</span> days</p>
-                <p>Longest streak: <span id="longestStreak">0</span> days</p>
+            <div class="progress-container">
+                <h3>Overall Progress</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p id="progressText">0%</p>
             </div>
 
-            <!-- Rest of the existing main content -->
-            
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>Total Pages Read</h3>
+                    <p id="totalPagesRead">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Pages Remaining</h3>
+                    <p id="pagesRemaining">604</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Daily Average</h3>
+                    <p id="dailyAverage">0</p>
+                </div>
+            </div>
+
+            <div class="history">
+                <h3>Reading History</h3>
+                <div id="historyList"></div>
+            </div>
         </div>
 
         <div id="analytics" class="tab-content">
             <h2>Reading Analytics</h2>
-            <div class="daily-goal-card">
-                <h3>📊 Daily Goal Progress</h3>
-                <p>Daily Target: <span id="dailyTarget">0</span> pages</p>
-                <input type="number" id="setDailyTarget" min="1" placeholder="Set daily target">
-                <button onclick="setDailyGoal()">Set Goal</button>
-            </div>
-            <!-- Existing analytics content -->
+            <canvas id="weeklyChart"></canvas>
+            <canvas id="monthlyChart"></canvas>
         </div>
 
         <div id="settings" class="tab-content">
-            <!-- Existing settings content -->
+            <h2>Settings</h2>
             <div class="input-group">
-                <h3>Reading Preferences</h3>
-                <label for="readingTime">Preferred reading time:</label>
-                <input type="time" id="readingTime">
-                <button onclick="setReadingTime()">Set Reminder Time</button>
+                <label for="totalPages">Total Pages Goal:</label>
+                <input type="number" id="totalPages" min="1" value="604">
+                <button onclick="setTotalPages()">Update Goal</button>
+            </div>
+            
+            <div class="input-group">
+                <label for="startPage">Starting Page:</label>
+                <input type="number" id="startPage" min="1" max="604">
+                <button onclick="setStartPage()">Set Starting Page</button>
+            </div>
+
+            <div class="export-import">
+                <h3>Backup Your Data</h3>
+                <button onclick="exportData()">Export Data</button>
+                <button onclick="importData()">Import Data</button>
             </div>
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
     <script>
-        // Enhance the data structure
+        // Initialize data
         let data = JSON.parse(localStorage.getItem('quranTracker')) || {
             totalPages: 604,
             startPage: 1,
             pagesRead: 0,
             history: [],
             startDate: new Date().toISOString(),
-            dailyTarget: 4,
-            currentStreak: 0,
-            longestStreak: 0,
-            lastReadingDate: null,
-            preferredReadingTime: '21:00',
             nextPageToRead: 1
         };
 
-        // Update the addPages function
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
+
+            if (tabName === 'analytics') {
+                updateAnalytics();
+            }
+        }
+
+        function setStartPage() {
+            const input = document.getElementById('startPage');
+            const page = parseInt(input.value);
+            if (page > 0 && page <= data.totalPages) {
+                data.startPage = page;
+                data.nextPageToRead = page;
+                data.pagesRead = page - 1;
+                saveData();
+                updateUI();
+            }
+        }
+
+        function setTotalPages() {
+            const input = document.getElementById('totalPages');
+            const pages = parseInt(input.value);
+            if (pages > 0) {
+                data.totalPages = pages;
+                saveData();
+                updateUI();
+            }
+        }
+
         function addPages() {
             const input = document.getElementById('pagesRead');
             const pages = parseInt(input.value);
             if (pages > 0) {
                 data.pagesRead += pages;
-                const currentDate = new Date().toISOString();
-                data.history.push({
-                    date: currentDate,
+                const entry = {
+                    date: new Date().toISOString(),
                     pages: pages,
                     id: Date.now(),
                     startPage: data.nextPageToRead,
                     endPage: data.nextPageToRead + pages - 1
-                });
-                
-                // Update next page to read
-                data.nextPageToRead = data.nextPageToRead + pages;
-                
-                // Update streak
-                updateStreak();
-                
+                };
+                data.history.push(entry);
+                data.nextPageToRead += pages;
                 input.value = '';
                 saveData();
                 updateUI();
             }
         }
 
-        function updateStreak() {
-            const today = new Date().setHours(0, 0, 0, 0);
-            const lastReading = data.lastReadingDate ? new Date(data.lastReadingDate).setHours(0, 0, 0, 0) : null;
-            
-            if (lastReading === null || today - lastReading === 86400000) { // 24 hours in milliseconds
-                data.currentStreak++;
-                data.longestStreak = Math.max(data.currentStreak, data.longestStreak);
-            } else if (today - lastReading > 86400000) {
-                data.currentStreak = 1;
-            }
-            
-            data.lastReadingDate = new Date().toISOString();
-        }
-
-        function setDailyGoal() {
-            const input = document.getElementById('setDailyTarget');
-            const target = parseInt(input.value);
-            if (target > 0) {
-                data.dailyTarget = target;
+        function deleteEntry(id) {
+            const entry = data.history.find(h => h.id === id);
+            if (entry) {
+                data.pagesRead -= entry.pages;
+                // Recalculate nextPageToRead
+                data.history = data.history.filter(h => h.id !== id);
+                if (data.history.length === 0) {
+                    data.nextPageToRead = data.startPage;
+                } else {
+                    const lastEntry = data.history[data.history.length - 1];
+                    data.nextPageToRead = lastEntry.endPage + 1;
+                }
                 saveData();
                 updateUI();
             }
         }
 
-        function setReadingTime() {
-            const input = document.getElementById('readingTime');
-            data.preferredReadingTime = input.value;
-            saveData();
-            
-            // Request permission for notifications
-            if (Notification.permission !== 'granted') {
-                Notification.requestPermission();
-            }
-        }
-
-        // Enhance the updateUI function
         function updateUI() {
-            // Previous UI updates remain...
-
             // Update next page information
             document.getElementById('nextPage').textContent = `Page ${data.nextPageToRead}`;
             
-            // Update last reading info
             if (data.history.length > 0) {
                 const lastEntry = data.history[data.history.length - 1];
                 document.getElementById('lastReadingInfo').textContent = 
-                    `Read pages ${lastEntry.startPage}-${lastEntry.endPage} on ${new Date(lastEntry.date).toLocaleDateString()}`;
+                    `Last session: Pages ${lastEntry.startPage}-${lastEntry.endPage} on ${new Date(lastEntry.date).toLocaleDateString()}`;
             }
 
-            // Update streak information
-            document.getElementById('currentStreak').textContent = data.currentStreak;
-            document.getElementById('longestStreak').textContent = data.longestStreak;
-            
-            // Update daily target
-            document.getElementById('dailyTarget').textContent = data.dailyTarget;
+            // Update progress bar
+            const progress = (data.pagesRead / data.totalPages * 100);
+            document.getElementById('progressFill').style.width = `${progress}%`;
+            document.getElementById('progressText').textContent = `${progress.toFixed(1)}%`;
 
-            // Previous update code remains...
+            // Update stats
+            document.getElementById('totalPagesRead').textContent = data.pagesRead;
+            document.getElementById('pagesRemaining').textContent = data.totalPages - data.pagesRead;
+
+            // Calculate daily average
+            const startDate = new Date(data.startDate);
+            const today = new Date();
+            const daysDiff = Math.max(1, Math.ceil((today - startDate) / (1000 * 60 * 60 * 24)));
+            const average = (data.pagesRead / daysDiff).toFixed(1);
+            document.getElementById('dailyAverage').textContent = average;
+
+            // Update history
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            data.history.slice().reverse().forEach(entry => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                const date = new Date(entry.date).toLocaleDateString();
+                div.innerHTML = `
+                    <span>${date}: Read pages ${entry.startPage}-${entry.endPage} (${entry.pages} pages)</span>
+                    <button class="delete" onclick="deleteEntry(${entry.id})">Delete</button>
+                `;
+                historyList.appendChild(div);
+            });
         }
 
-        // Initialize reminder system
-        function initializeReminders() {
-            if (Notification.permission === 'granted') {
-                setInterval(() => {
-                    const now = new Date();
-                    const preferredTime = data.preferredReadingTime.split(':');
-                    if (now.getHours() === parseInt(preferredTime[0]) && 
-                        now.getMinutes() === parseInt(preferredTime[1])) {
-                        new Notification('Quran Reading Reminder', {
-                            body: `Time to read! Start from page ${data.nextPageToRead}`,
-                            icon: '📖'
-                        });
+        function updateAnalytics() {
+            const weeklyData = {};
+            const monthlyData = {};
+
+            data.history.forEach(entry => {
+                const date = new Date(entry.date);
+                const weekKey = `${date.getFullYear()}-W${getWeekNumber(date)}`;
+                const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+
+                weeklyData[weekKey] = (weeklyData[weekKey] || 0) + entry.pages;
+                monthlyData[monthKey] = (monthlyData[monthKey] || 0) + entry.pages;
+            });
+
+            createChart('weeklyChart', 'Pages Read per Week', weeklyData);
+            createChart('monthlyChart', 'Pages Read per Month', monthlyData);
+        }
+
+        function getWeekNumber(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        function createChart(canvasId, label, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: label,
+                        data: Object.values(data),
+                        backgroundColor: '#4CAF50'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
                     }
-                }, 60000); // Check every minute
-            }
+                }
+            });
         }
 
-        // Previous functions remain the same...
+        function exportData() {
+            const dataStr = JSON.stringify(data);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'quran-tracker-backup.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
 
-        // Initialize the app
-        updateUI();
-        initializeReminders();
-    </script>
-</body>
-</html>
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        data = importedData;
+                        saveData();
+                        updateUI();
+                        alert('Data imported successfully!');
+                    } catch
