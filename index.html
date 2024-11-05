@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quran Reading Tracker</title>
     <style>
+        /* Previous styles remain the same */
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
@@ -67,6 +68,7 @@
             border-radius: 4px;
             cursor: pointer;
             margin: 0 5px;
+            -webkit-tap-highlight-color: transparent;
         }
         button:hover {
             background-color: #45a049;
@@ -82,6 +84,7 @@
             margin-right: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            width: 100px;
         }
         .history {
             margin-top: 20px;
@@ -99,6 +102,8 @@
             display: flex;
             margin-bottom: 20px;
             border-bottom: 1px solid #ddd;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .tab {
             padding: 10px 20px;
@@ -106,10 +111,20 @@
             border: none;
             background: none;
             color: #666;
+            white-space: nowrap;
+            position: relative;
         }
         .tab.active {
-            border-bottom: 2px solid #4CAF50;
             color: #4CAF50;
+        }
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: #4CAF50;
         }
         .tab-content {
             display: none;
@@ -117,9 +132,12 @@
         .tab-content.active {
             display: block;
         }
+        #analytics {
+            padding: 20px 0;
+        }
         #analytics canvas {
             max-width: 100%;
-            margin-top: 20px;
+            margin: 20px 0;
         }
         .export-import {
             margin-top: 20px;
@@ -127,16 +145,31 @@
             background: #f8f9fa;
             border-radius: 8px;
         }
+        @media (max-width: 600px) {
+            .history-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .history-item button {
+                margin-top: 10px;
+            }
+            .container {
+                padding: 15px;
+            }
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Quran Reading Tracker</h1>
 
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('main')">Main</button>
-            <button class="tab" onclick="showTab('analytics')">Analytics</button>
-            <button class="tab" onclick="showTab('settings')">Settings</button>
+        <div class="tabs" id="tabs">
+            <button class="tab active" data-tab="main">Main</button>
+            <button class="tab" data-tab="analytics">Analytics</button>
+            <button class="tab" data-tab="settings">Settings</button>
         </div>
 
         <div id="main" class="tab-content active">
@@ -183,8 +216,14 @@
 
         <div id="analytics" class="tab-content">
             <h2>Reading Analytics</h2>
-            <canvas id="weeklyChart"></canvas>
-            <canvas id="monthlyChart"></canvas>
+            <div style="margin-bottom: 30px;">
+                <h3>Weekly Progress</h3>
+                <canvas id="weeklyChart"></canvas>
+            </div>
+            <div>
+                <h3>Monthly Progress</h3>
+                <canvas id="monthlyChart"></canvas>
+            </div>
         </div>
 
         <div id="settings" class="tab-content">
@@ -221,17 +260,42 @@
             nextPageToRead: 1
         };
 
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
+        // Chart instances
+        let weeklyChart = null;
+        let monthlyChart = null;
+
+        // Initialize tab handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabsContainer = document.getElementById('tabs');
+            
+            tabsContainer.addEventListener('click', function(e) {
+                if (e.target.classList.contains('tab')) {
+                    const tabId = e.target.getAttribute('data-tab');
+                    showTab(tabId);
+                }
             });
+
+            // Initial UI update
+            updateUI();
+        });
+
+        function showTab(tabId) {
+            // Update tab buttons
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
+                if (tab.getAttribute('data-tab') === tabId) {
+                    tab.classList.add('active');
+                }
             });
-            document.getElementById(tabName).classList.add('active');
-            document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
 
-            if (tabName === 'analytics') {
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+
+            // Update analytics if needed
+            if (tabId === 'analytics') {
                 updateAnalytics();
             }
         }
@@ -282,7 +346,6 @@
             const entry = data.history.find(h => h.id === id);
             if (entry) {
                 data.pagesRead -= entry.pages;
-                // Recalculate nextPageToRead
                 data.history = data.history.filter(h => h.id !== id);
                 if (data.history.length === 0) {
                     data.nextPageToRead = data.startPage;
@@ -296,7 +359,6 @@
         }
 
         function updateUI() {
-            // Update next page information
             document.getElementById('nextPage').textContent = `Page ${data.nextPageToRead}`;
             
             if (data.history.length > 0) {
@@ -305,23 +367,19 @@
                     `Last session: Pages ${lastEntry.startPage}-${lastEntry.endPage} on ${new Date(lastEntry.date).toLocaleDateString()}`;
             }
 
-            // Update progress bar
             const progress = (data.pagesRead / data.totalPages * 100);
             document.getElementById('progressFill').style.width = `${progress}%`;
             document.getElementById('progressText').textContent = `${progress.toFixed(1)}%`;
 
-            // Update stats
             document.getElementById('totalPagesRead').textContent = data.pagesRead;
             document.getElementById('pagesRemaining').textContent = data.totalPages - data.pagesRead;
 
-            // Calculate daily average
             const startDate = new Date(data.startDate);
             const today = new Date();
             const daysDiff = Math.max(1, Math.ceil((today - startDate) / (1000 * 60 * 60 * 24)));
             const average = (data.pagesRead / daysDiff).toFixed(1);
             document.getElementById('dailyAverage').textContent = average;
 
-            // Update history
             const historyList = document.getElementById('historyList');
             historyList.innerHTML = '';
             data.history.slice().reverse().forEach(entry => {
@@ -337,6 +395,10 @@
         }
 
         function updateAnalytics() {
+            // Destroy existing charts if they exist
+            if (weeklyChart) weeklyChart.destroy();
+            if (monthlyChart) monthlyChart.destroy();
+
             const weeklyData = {};
             const monthlyData = {};
 
@@ -362,7 +424,7 @@
 
         function createChart(canvasId, label, data) {
             const ctx = document.getElementById(canvasId).getContext('2d');
-            new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: Object.keys(data),
@@ -370,44 +432,4 @@
                         label: label,
                         data: Object.values(data),
                         backgroundColor: '#4CAF50'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
                     }
-                }
-            });
-        }
-
-        function exportData() {
-            const dataStr = JSON.stringify(data);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'quran-tracker-backup.json';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function importData() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = function(e) {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    try {
-                        const importedData = JSON.parse(e.target.result);
-                        data = importedData;
-                        saveData();
-                        updateUI();
-                        alert('Data imported successfully!');
-                    } catch
