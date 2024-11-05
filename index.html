@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quran Reading Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .progress-container {
+            margin: 20px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .input-group {
+            margin: 20px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input[type="number"] {
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .history {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quran Reading Tracker</h1>
+        
+        <div class="input-group">
+            <label for="totalPages">Total Pages Goal:</label>
+            <input type="number" id="totalPages" min="1" value="604">
+            <button onclick="setTotalPages()">Set Goal</button>
+        </div>
+
+        <div class="input-group">
+            <label for="pagesRead">Pages Read Today:</label>
+            <input type="number" id="pagesRead" min="1">
+            <button onclick="addPages()">Add Pages</button>
+        </div>
+
+        <div class="progress-container">
+            <h3>Overall Progress</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p id="progressText">0%</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Pages Read</h3>
+                <p id="totalPagesRead">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Pages Remaining</h3>
+                <p id="pagesRemaining">604</p>
+            </div>
+            <div class="stat-card">
+                <h3>Daily Average</h3>
+                <p id="dailyAverage">0</p>
+            </div>
+        </div>
+
+        <div class="history">
+            <h3>Reading History</h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize data from localStorage or set defaults
+        let data = JSON.parse(localStorage.getItem('quranTracker')) || {
+            totalPages: 604,
+            pagesRead: 0,
+            history: [],
+            startDate: new Date().toISOString()
+        };
+
+        // Update UI on load
+        updateUI();
+
+        function setTotalPages() {
+            const input = document.getElementById('totalPages');
+            const pages = parseInt(input.value);
+            if (pages > 0) {
+                data.totalPages = pages;
+                saveData();
+                updateUI();
+            }
+        }
+
+        function addPages() {
+            const input = document.getElementById('pagesRead');
+            const pages = parseInt(input.value);
+            if (pages > 0) {
+                data.pagesRead += pages;
+                data.history.push({
+                    date: new Date().toISOString(),
+                    pages: pages
+                });
+                input.value = '';
+                saveData();
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            // Update progress bar
+            const progress = (data.pagesRead / data.totalPages) * 100;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+            document.getElementById('progressText').textContent = `${progress.toFixed(1)}%`;
+
+            // Update stats
+            document.getElementById('totalPagesRead').textContent = data.pagesRead;
+            document.getElementById('pagesRemaining').textContent = data.totalPages - data.pagesRead;
+
+            // Calculate daily average
+            const startDate = new Date(data.startDate);
+            const today = new Date();
+            const daysDiff = Math.max(1, Math.ceil((today - startDate) / (1000 * 60 * 60 * 24)));
+            const average = (data.pagesRead / daysDiff).toFixed(1);
+            document.getElementById('dailyAverage').textContent = average;
+
+            // Update history
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            data.history.slice().reverse().forEach(entry => {
+                const date = new Date(entry.date).toLocaleDateString();
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.textContent = `${date}: Read ${entry.pages} pages`;
+                historyList.appendChild(div);
+            });
+        }
+
+        function saveData() {
+            localStorage.setItem('quranTracker', JSON.stringify(data));
+        }
+    </script>
+</body>
+</html>
+Initial commit: Add Quran tracker app
